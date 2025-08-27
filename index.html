@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Excel Sheets Viewer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+      .card {
+        background-color: #1f2937;
+      }
+      .form-input {
+        background-color: #374151;
+        border-color: #4b5563;
+      }
+      .form-input:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 1px #3b82f6;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+      const { useState, useEffect } = React;
+
+      // Mock data representing Excel sheets and their columns
+      const sheetData = {
+        Employees: [
+          { name: "name", type: "text" },
+          { name: "email", type: "email" },
+          { name: "age", type: "number" },
+          { name: "salary", type: "number" },
+          { name: "department", type: "dropdown" },
+          { name: "hire_date", type: "date" },
+          { name: "status", type: "dropdown" },
+        ],
+        Products: [
+          { name: "product_name", type: "text" },
+          { name: "category", type: "dropdown" },
+          { name: "price", type: "number" },
+          { name: "quantity", type: "number" },
+          { name: "release_date", type: "date" },
+        ],
+        Customers: [
+          { name: "customer_name", type: "text" },
+          { name: "email", type: "email" },
+          { name: "phone", type: "text" },
+          { name: "location", type: "dropdown" },
+          { name: "join_date", type: "date" },
+        ],
+        Orders: [
+          { name: "order_id", type: "text" },
+          { name: "customer_email", type: "email" },
+          { name: "order_date", type: "date" },
+          { name: "amount", type: "number" },
+          { name: "status", type: "dropdown" },
+        ],
+        Inventory: [
+          { name: "item_name", type: "text" },
+          { name: "category", type: "dropdown" },
+          { name: "quantity", type: "number" },
+          { name: "price", type: "number" },
+          { name: "location", type: "dropdown" },
+        ],
+        Expenses: [
+          { name: "expense_name", type: "text" },
+          { name: "category", type: "dropdown" },
+          { name: "amount", type: "number" },
+          { name: "date", type: "date" },
+          { name: "department", type: "dropdown" },
+        ],
+      };
+
+      // Dropdown options for specific fields
+      const dropdownOptions = {
+        department: ["HR", "Finance", "Engineering", "Marketing", "Sales"],
+        status: ["Active", "Inactive", "Pending", "Completed", "Cancelled"],
+        category: ["Electronics", "Clothing", "Food", "Furniture", "Other"],
+        location: ["North", "South", "East", "West", "Central"],
+      };
+
+      const Navbar = ({ sheets, activeSheet, setActiveSheet }) => {
+        return (
+          <nav className="bg-gray-800 p-4">
+            <div className="flex flex-wrap justify-center space-x-1 md:space-x-4">
+              {sheets.map((sheet) => (
+                <button
+                  key={sheet}
+                  onClick={() => setActiveSheet(sheet)}
+                  className={`px-3 py-2 rounded-md text-sm font-medium ${
+                    activeSheet === sheet
+                      ? "bg-gray-900 text-white"
+                      : "text-gray-300 hover:bg-gray-700 hover:text-white"
+                  }`}
+                >
+                  {sheet}
+                </button>
+              ))}
+            </div>
+          </nav>
+        );
+      };
+
+      const FormInput = ({ field, value, onChange }) => {
+        const renderInput = () => {
+          switch (field.type) {
+            case "email":
+              return (
+                <input
+                  type="email"
+                  name={field.name}
+                  value={value}
+                  onChange={onChange}
+                  className="form-input w-full p-2 rounded mt-1 text-white"
+                  required
+                />
+              );
+            case "number":
+              return (
+                <input
+                  type="number"
+                  name={field.name}
+                  value={value}
+                  onChange={onChange}
+                  className="form-input w-full p-2 rounded mt-1 text-white"
+                  required
+                />
+              );
+            case "date":
+              return (
+                <input
+                  type="date"
+                  name={field.name}
+                  value={value}
+                  onChange={onChange}
+                  className="form-input w-full p-2 rounded mt-1 text-white"
+                  required
+                />
+              );
+            case "dropdown":
+              const options = dropdownOptions[field.name.split("_")[0]] || [];
+              return (
+                <select
+                  name={field.name}
+                  value={value}
+                  onChange={onChange}
+                  className="form-input w-full p-2 rounded mt-1 text-white"
+                  required
+                >
+                  <option value="">
+                    Select {field.name.replace("_", " ")}
+                  </option>
+                  {options.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              );
+            default:
+              return (
+                <input
+                  type="text"
+                  name={field.name}
+                  value={value}
+                  onChange={onChange}
+                  className="form-input w-full p-2 rounded mt-1 text-white"
+                  required
+                />
+              );
+          }
+        };
+
+        return (
+          <div className="mb-4">
+            <label className="block text-gray-300 text-sm font-medium capitalize">
+              {field.name.replace("_", " ")}
+            </label>
+            {renderInput()}
+          </div>
+        );
+      };
+
+      const SheetForm = ({ sheetName, fields }) => {
+        const [formData, setFormData] = useState({});
+
+        useEffect(() => {
+          const initialData = {};
+          fields.forEach((field) => {
+            initialData[field.name] = "";
+          });
+          setFormData(initialData);
+        }, [sheetName]);
+
+        const handleChange = (e) => {
+          const { name, value } = e.target;
+          setFormData((prev) => ({
+            ...prev,
+            [name]: value,
+          }));
+        };
+
+        const handleSubmit = (e) => {
+          e.preventDefault();
+          alert(
+            `Submitted ${sheetName} data: ${JSON.stringify(formData, null, 2)}`
+          );
+          // Here you would typically send the data to an API
+        };
+
+        return (
+          <div className="max-w-3xl mx-auto mt-8">
+            <div className="card rounded-lg shadow-lg p-6">
+              <h2 className="text-2xl font-bold text-white mb-6 capitalize">
+                {sheetName.replace("_", " ")} Form
+              </h2>
+              <form onSubmit={handleSubmit}>
+                {fields.map((field) => (
+                  <FormInput
+                    key={field.name}
+                    field={field}
+                    value={formData[field.name] || ""}
+                    onChange={handleChange}
+                  />
+                ))}
+                <button
+                  type="submit"
+                  className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mt-4"
+                >
+                  Add {sheetName} Record
+                </button>
+              </form>
+            </div>
+          </div>
+        );
+      };
+
+      const App = () => {
+        const sheets = Object.keys(sheetData);
+        const [activeSheet, setActiveSheet] = useState(sheets[0]);
+
+        return (
+          <div className="min-h-screen bg-gray-900 text-white">
+            <Navbar
+              sheets={sheets}
+              activeSheet={activeSheet}
+              setActiveSheet={setActiveSheet}
+            />
+            <SheetForm
+              sheetName={activeSheet}
+              fields={sheetData[activeSheet]}
+            />
+          </div>
+        );
+      };
+
+      const root = ReactDOM.createRoot(document.getElementById("root"));
+      root.render(<App />);
+    </script>
+  </body>
+</html>
